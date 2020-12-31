@@ -1,5 +1,5 @@
 # db-sync-queries
-A collection of useful views and queries for the cardano-db-sync Postgres database. 
+A collection of useful views and queries for the cardano-db-sync Postgres database (version 7.1.0). 
 
 This was mostly born out of the desire to create the final v_pool_rewards_summary, as we were relying on pooltool.io for these calculations and wanted to be able to use our own calculations and not a third parties.
 

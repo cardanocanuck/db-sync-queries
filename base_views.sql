@@ -11,7 +11,6 @@ from block b
 
 ------------------------------------
 -- V_POOL_UPDATES
--- TODO: remove retired pools
 ------------------------------------
 
 drop view if exists v_pool_update cascade;
