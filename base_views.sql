@@ -4,7 +4,7 @@
 ------------------------------------
 create or replace view v_block 
 as
-select b.*, ph.view as pool_hash
+select b.*, ph.view as pool_hash, ph.id as pool_hash_id
 from block b
 	inner join slot_leader sl on sl.id = b.slot_leader_id
 	left join pool_hash ph on ph.id = sl.pool_hash_id;
@@ -254,5 +254,123 @@ from (
 ) a
 ;
 
+--------------------------------------
+-- v_tx_input
+--------------------------------------
+create or replace view v_tx_input
+as
+select 
+	tx.id as tx_id,
+	tx.hash as tx_hash,
+	encode(tx.hash, 'hex') as tx_hash_hex,
+	tx.fee as tx_fee,
+	tx.deposit as tx_deposit,
+	tx.size as tx_size,
+	b.id as block_id,
+	b.epoch_no,
+	b.block_no,
+	b.slot_no,
+	b.epoch_slot_no,
+	b.slot_leader_id,
+	o.address as input_address,
+	o.address_raw as input_address_raw,
+	o.index,
+	o.value,
+	o.stake_address_id,
+	o.payment_cred,
+	row_number() over (partition by tx_id order by value desc) as val_rank
+from tx_out o
+	inner join tx_in i on o.tx_id = i.tx_out_id
+	inner join tx on tx.id = i.tx_in_id and i.tx_out_index = o.index
+	inner join block b on tx.block_id = b.id;
 
 
+
+--------------------------------------
+-- v_tx_output
+--------------------------------------
+create or replace view v_tx_output
+as
+select 
+	tx.id as tx_id,
+	tx.hash as tx_hash,
+	encode(tx.hash, 'hex') as tx_hash_hex,
+	tx.fee as tx_fee,
+	tx.deposit as tx_deposit,
+	tx.size as tx_size,
+	b.id as block_id,
+	b.epoch_no,
+	b.block_no,
+	b.slot_no,
+	b.epoch_slot_no,
+	b.slot_leader_id,
+	o.address as output_address,
+	o.address_raw as output_address_raw,
+	o.index,
+	o.value,
+	o.stake_address_id,
+	o.payment_cred,
+	row_number() over (partition by tx_id order by value desc) as val_rank
+from tx_out o
+	inner join tx on o.tx_id = tx.id
+	inner join block b on tx.block_id = b.id;
+
+
+
+
+--------------------------------
+-- v_oracle_results
+--------------------------------
+
+create or replace view v_oracle_results
+as
+with oracles as (
+	select 'NUTS' as oracle_ticker, 'StakeNuts.com' as oracle_name, 'StakeNuts nut.link oracle pool' as oracle_description, 'addr1q85yx2w7ragn5sx6umgmtjpc3865s9sg59sz4rrh6f90kgwfwlzu3w8ttacqg89mkdgwshwnplj5c5n9f8dhp0h55q2q7qm63t' as oracle_address union all
+	select 'STKHO', 'STKH Oracle', 'A Cardano Oracle - For the Community, by the Community.', 'addr1v8w6wfzljnzdrwq6patkas35pgjzc3xlggpz70kaldsetcsrw3ep4' union all
+	select 'CRFA', 'CardanoFans', 'CardanoFans - we believe in access to financial system for everybody', 'addr1v8yczm692pktwlvjfgwucrullt6af0lme7rh97fhfw2fgjc4chr79' union all
+	select 'CANUK', 'Cardano Canucks Oracles', 'A Canadian oracle provider operated by Cardano Canucks Stake Pool', 'addr1qygvjldfxxhp7q96w729c6gvq7hy6pfc937jqlvpms2833rah0c4wey5zfgnuar9eyf6q7pzjzv56c542q7zctpkz9wqay69js'
+)
+
+select 
+	b.epoch_no,
+	b.block_no,
+	b.time,
+	ora.oracle_ticker,
+	m.json,
+	jsonb_path_query_first(m.json, '$.ADABTC[*] ? (@.source == "coinGecko")')->>'value' as ADABTC_coingecko,
+	jsonb_path_query_first(m.json, '$.ADABTC[*] ? (@.source == "cryptoCompare")')->>'value' as ADABTC_cryptocompare,
+
+	jsonb_path_query_first(m.json, '$.ADAUSD[*] ? (@.source == "coinGecko")')->>'value' as ADAUSD_coingecko,
+	jsonb_path_query_first(m.json, '$.ADAUSD[*] ? (@.source == "cryptoCompare")')->>'value' as ADAUSD_cryptocompare,
+	jsonb_path_query_first(m.json, '$.ADAUSD[*] ? (@.source == "ergoOracles")')->>'value' as ADAUSD_ergoOracles,
+
+	jsonb_path_query_first(m.json, '$.ADACAD[*] ? (@.source == "coinGecko")')->>'value' as ADACAD_coingecko,
+	jsonb_path_query_first(m.json, '$.ADACAD[*] ? (@.source == "cryptoCompare")')->>'value' as ADACAD_cryptocompare,
+
+	jsonb_path_query_first(m.json, '$.ADAEUR[*] ? (@.source == "coinGecko")')->>'value' as ADAEUR_coingecko,
+	jsonb_path_query_first(m.json, '$.ADAEUR[*] ? (@.source == "cryptoCompare")')->>'value' as ADAEUR_cryptocompare,
+
+	jsonb_path_query_first(m.json, '$.ADAJPY[*] ? (@.source == "coinGecko")')->>'value' as ADAJPY_coingecko,
+	jsonb_path_query_first(m.json, '$.ADAJPY[*] ? (@.source == "cryptoCompare")')->>'value' as ADAJPY_cryptocompare,
+
+	jsonb_path_query_first(m.json, '$.AGIUSD[*] ? (@.source == "coinGecko")')->>'value' as AGIUSD_coingecko,
+	jsonb_path_query_first(m.json, '$.AGIUSD[*] ? (@.source == "cryptoCompare")')->>'value' as AGIUSD_cryptocompare,
+
+	jsonb_path_query_first(m.json, '$.BTCUSD[*] ? (@.source == "coinGecko")')->>'value' as BTCUSD_coingecko,
+	jsonb_path_query_first(m.json, '$.BTCUSD[*] ? (@.source == "cryptoCompare")')->>'value' as BTCUSD_cryptocompare,
+
+	jsonb_path_query_first(m.json, '$.ERGUSD[*] ? (@.source == "coinGecko")')->>'value' as ERGUSD_coingecko,
+	jsonb_path_query_first(m.json, '$.ERGUSD[*] ? (@.source == "ergoOracles")')->>'value' as ERGUSD_ergoOracles,
+
+	jsonb_path_query_first(m.json, '$.TSLA[*] ? (@.source == "investorsExchange")')->>'value' as TSLA_investorsexchange,
+
+	(m.json -> 'DRAND') ->> 'round' as DRAND_round,
+	(m.json -> 'DRAND') ->> 'randomness' as DRAND_randomness,
+	row_number() over (partition by b.epoch_no, oracle_ticker order by block_no) as epoch_index,
+	row_number() over (partition by b.epoch_no, oracle_ticker order by block_no desc) as epoch_index_rev
+from tx_out o
+	inner join tx_in i on o.tx_id = i.tx_out_id
+	inner join tx on tx.id = i.tx_in_id and i.tx_out_index = o.index
+	inner join block b on tx.block_id = b.id
+	inner join oracles ora on o.address = ora.oracle_address
+	inner join tx_metadata m on tx.id = m.tx_id;
