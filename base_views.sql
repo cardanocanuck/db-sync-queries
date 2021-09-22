@@ -180,13 +180,19 @@ drop view if exists v_pool_owners_by_epoch;
 
 create or replace view v_pool_owners_by_epoch
 as 
-select epoch_no, pe.pool_hash_id, pool_id, po.registered_tx_id, encode(po.hash, 'hex') as addr, sa.id as addr_id
+select 
+	epoch_no, 
+	pe.pool_hash_id, 
+	pool_id, 
+	po.registered_tx_id, 
+	encode(sa.hash_raw, 'hex') as addr, 
+	sa.view as bech32_addr,
+	sa.id as addr_id
 from v_pool_history_by_epoch pe
 	inner join pool_owner po on pe.pool_hash_id = po.pool_hash_id
 		and pe.registered_tx_id = po.registered_tx_id
-	inner join stake_address sa on right(encode(sa.hash_raw, 'hex'), 56) = encode(po.hash, 'hex')
+	inner join stake_address sa on sa.id = po.addr_id
 ;
-
 
 
 
@@ -199,6 +205,7 @@ create or replace view v_pool_rewards_detail
 as 
 select 
 	es.epoch_no,
+	r.spendable_epoch as paid_epoch,
 	ph.view as pool,
 	ph.id as pool_hash_id,
 	es.addr_id,
@@ -212,7 +219,7 @@ from epoch_stake es
 	left join pool_hash ph on es.pool_id = ph.id
 	left join stake_address sa on es.addr_id = sa.id
 	left join reward r on es.addr_id = r.addr_id 
-							and es.epoch_no = r.epoch_no
+							and es.epoch_no = r.earned_epoch
 	left join v_pool_history_by_epoch pp on es.epoch_no = pp.epoch_no
 		and ph.id = pp.pool_hash_id
 	left join v_pool_owners_by_epoch po on es.epoch_no = po.epoch_no
@@ -315,7 +322,25 @@ from tx_out o
 	inner join tx on o.tx_id = tx.id
 	inner join block b on tx.block_id = b.id;
 
-
+----------------------------------
+-- v_asset_mint
+----------------------------------
+create or replace view v_asset_mint
+as
+select 
+	encode(m.policy, 'hex') as policyid,
+	encode(m.name, 'hex') as asset_code,
+	convert_from(m.name, 'utf8') as asset_name,
+	b.epoch_no,
+	b.time,
+	encode(t.hash, 'hex') as tx_hash,
+	quantity,
+	meta.key as metadata_key,
+	meta.json as metadata
+from ma_tx_mint m
+	inner join tx t on m.tx_id = t.id
+	inner join block b on b.id = t.block_id
+	left join tx_metadata meta on m.tx_id = meta.tx_id;
 
 
 --------------------------------
