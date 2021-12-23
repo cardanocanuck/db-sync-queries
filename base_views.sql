@@ -328,9 +328,9 @@ from tx_out o
 create or replace view v_asset_mint
 as
 select 
-	encode(m.policy, 'hex') as policyid,
-	encode(m.name, 'hex') as asset_code,
-	convert_from(m.name, 'utf8') as asset_name,
+	encode(ma.policy, 'hex') as policyid,
+	encode(ma.name, 'hex') as asset_code,
+	convert_from(ma.name, 'utf8') as asset_name,
 	b.epoch_no,
 	b.time,
 	encode(t.hash, 'hex') as tx_hash,
@@ -340,6 +340,7 @@ select
 from ma_tx_mint m
 	inner join tx t on m.tx_id = t.id
 	inner join block b on b.id = t.block_id
+	inner join multi_asset ma on m.ident = ma.id
 	left join tx_metadata meta on m.tx_id = meta.tx_id;
 
 
