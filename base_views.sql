@@ -245,6 +245,7 @@ from (
 		epoch_no, 
 		pool, 
 		pool_hash_id, 
+		count(distinct addr_id) as delegators,
 		sum(stake_ada)::numeric(16,6)  as stake,
 		sum(reward_ada)::numeric(16,6) as rewards, 
 		sum(case when is_owner_addr = 1 then stake_ada else null end)::numeric(16,6) as pledged_ada,
