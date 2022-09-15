@@ -20,6 +20,7 @@ as
 select 
 	pool_id,
 	pool_hash_id,
+	pool_update_id,
 	epoch_no,
 	slot_no,
 	epoch_slot_no,
@@ -45,6 +46,7 @@ from (
 		b.epoch_slot_no,
 		b.time,
 		row_number() over (partition by ph.view, b.epoch_no order by b.time desc ) as rownum,
+		pu.id as pool_update_id,
 		pu.pledge,
 		pu.active_epoch_no,
 		pu.meta_id,
@@ -54,13 +56,13 @@ from (
 		cert_index,
 		vrf_key_hash,
 		pu.registered_tx_id,
-		right(encode(pu.reward_addr, 'hex'), 56) as reward_addr_hash
+		sa.view as reward_addr_hash
 	from pool_update pu
 		inner join tx t on pu.registered_tx_id = t.id
 		inner join block b on t.block_id = b.id
 		inner join pool_hash ph on pu.hash_id = ph.id
 		--left join stake_address sa on right(encode(pu.reward_addr, 'hex'), 56) = sa.view
-		left join stake_address sa on pu.reward_addr = sa.hash_raw
+		left join stake_address sa on pu.reward_addr_id = sa.id
 ) a;
 
 -----------------------------------------------
@@ -115,6 +117,7 @@ with epoch_pools as (
 select 
 	epoch_no,
 	pool_hash_id,
+	pool_update_id,
 	case when registered_margin is not null then 1 else 0 end as is_registered_epoch,
 	has_announced_retirement,
 	retiring_epoch,
@@ -136,6 +139,7 @@ from (
 	select 
 		ep.epoch_no,
 		ep.pool_hash_id,
+		phr.pool_update_id,
 		phr.pool_id,
 		phr.margin as registered_margin,
 		phr.pledge as registered_pledge,
@@ -184,13 +188,12 @@ select
 	epoch_no, 
 	pe.pool_hash_id, 
 	pool_id, 
-	po.registered_tx_id, 
+	po.pool_update_id, 
 	encode(sa.hash_raw, 'hex') as addr, 
 	sa.view as bech32_addr,
 	sa.id as addr_id
 from v_pool_history_by_epoch pe
-	inner join pool_owner po on pe.pool_hash_id = po.pool_hash_id
-		and pe.registered_tx_id = po.registered_tx_id
+	inner join pool_owner po on pe.pool_update_id = po.pool_update_id
 	inner join stake_address sa on sa.id = po.addr_id
 ;
 
@@ -343,7 +346,6 @@ from ma_tx_mint m
 	inner join block b on b.id = t.block_id
 	inner join multi_asset ma on m.ident = ma.id
 	left join tx_metadata meta on m.tx_id = meta.tx_id;
-
 
 --------------------------------
 -- v_oracle_results
