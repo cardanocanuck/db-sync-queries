@@ -33,6 +33,9 @@ This view provides an overview of rewards per pool, per epoch.
 
 This view also includes the calculation of pool rewards vs pledge rewards, since all pledge rewards currently go to the rewards address. Note that this currently sums up the rewards for all pledge addresses (if multiple) into a single column. This calculation uses the average delegator roa for that epoch amd applies that to the pledge addresses, and allocates the remaining rewards to the pool.
 
+# v_asset_mint
+gives a summary of all assets minted. Should be filtered by policy id.
+
 
 
 

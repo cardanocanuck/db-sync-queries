@@ -117,10 +117,10 @@ with epoch_pools as (
 select 
 	epoch_no,
 	pool_hash_id,
-	pool_update_id,
 	case when registered_margin is not null then 1 else 0 end as is_registered_epoch,
 	has_announced_retirement,
 	retiring_epoch,
+	FIRST_VALUE(pool_update_id) OVER (PARTITION BY pool_hash_id, registered_partition) AS pool_update_id,
 	FIRST_VALUE(pool_id) OVER (PARTITION BY pool_hash_id, registered_partition) AS pool_id,
 	FIRST_VALUE(registered_margin) OVER (PARTITION BY pool_hash_id, registered_partition) AS registered_margin,
 	FIRST_VALUE(registered_pledge) OVER (PARTITION BY pool_hash_id, registered_partition) AS registered_pledge,
