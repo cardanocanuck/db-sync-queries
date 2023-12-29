@@ -334,7 +334,7 @@ as
 select 
 	encode(ma.policy, 'hex') as policyid,
 	encode(ma.name, 'hex') as asset_code,
-	convert_from(ma.name, 'utf8') as asset_name,
+	--convert_from(ma.name, 'utf8') as asset_name,
 	b.epoch_no,
 	b.time,
 	encode(t.hash, 'hex') as tx_hash,
